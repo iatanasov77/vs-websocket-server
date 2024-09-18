@@ -29,9 +29,7 @@ class WebSocket implements MessageComponentInterface
     {
         // Store the new connection to send messages to later
         $this->clients->attach( $conn );
-        
-        $logData    = "New connection! ({$conn->resourceId})\n";
-        \file_put_contents( $this->logFile, $logData, FILE_APPEND | LOCK_EX );
+        $this->log( "New connection! ({$conn->resourceId})\n" );
     }
     
     public function onMessage( ConnectionInterface $from, $msg )
@@ -44,6 +42,7 @@ class WebSocket implements MessageComponentInterface
         );
         */
         
+        $this->log( "Sending Message: {$msg}\n" );
         foreach ( $this->clients as $client ) {
             if ( $from !== $client ) {
                 // The sender is not the receiver, send to each client connected
@@ -56,24 +55,25 @@ class WebSocket implements MessageComponentInterface
     {
         // The connection is closed, remove it, as we can no longer send it messages
         $this->clients->detach( $conn );
-        
-        $logData    = "Connection {$conn->resourceId} has disconnected\n";
-        \file_put_contents( $this->logFile, $logData, FILE_APPEND | LOCK_EX );
+        $this->log( "Connection {$conn->resourceId} has disconnected\n" );
     }
     
     public function onError( ConnectionInterface $conn, \Exception $e )
     {
-        $logData    = "An error has occurred: {$e->getMessage()}\n";
-        \file_put_contents( $this->logFile, $logData, FILE_APPEND | LOCK_EX );
-        
+        $this->log( "An error has occurred: {$e->getMessage()}\n" );
         $conn->close();
+    }
+    
+    private function log( $logData ): void
+    {
+        \file_put_contents( $this->logFile, $logData, FILE_APPEND | LOCK_EX );
     }
 }
 
 $server = IoServer::factory(
     new HttpServer(
         new WsServer(
-            new WebSocket() // <-- My class, ignore it
+            new WebSocket()
         )
     ),
     $argv[1]
